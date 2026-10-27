@@ -1,1 +1,49 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: var(--font-roboto), Roboto, system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-google-sans), "Google Sans", "Product Sans", system-ui, sans-serif;
+  }
+}
+
+.font-header {
+  font-family: var(--font-google-sans), "Google Sans", "Product Sans", system-ui, sans-serif;
+}
+
+.font-subtitle {
+  font-family: var(--font-roboto), Roboto, system-ui, sans-serif;
+}
+
+/* Hide scrollbar for ticker while keeping scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* View Transitions API styles for AnimatedThemeToggler */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
