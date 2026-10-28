@@ -8,10 +8,16 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 interface KaratTableProps {
   karats: KaratPriceBreakdown[];
   currency: CurrencyCode;
+  tickDirection?: 'up' | 'down' | null;
   onSelectForCalculation: (karat: KaratType) => void;
 }
 
-export function KaratTable({ karats, currency, onSelectForCalculation }: KaratTableProps) {
+export function KaratTable({
+  karats,
+  currency,
+  tickDirection,
+  onSelectForCalculation,
+}: KaratTableProps) {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -44,7 +50,7 @@ export function KaratTable({ karats, currency, onSelectForCalculation }: KaratTa
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-8 shadow-sm transition-colors space-y-6 w-full">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-8 shadow-sm transition-colors space-y-6 w-full animate-fade-in-up delay-100">
       
       {/* Title & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
@@ -129,8 +135,16 @@ export function KaratTable({ karats, currency, onSelectForCalculation }: KaratTa
                     {(k.purity * 100).toFixed(1)}%
                   </td>
 
-                  {/* Price Per Gram (Primary Highlight) */}
-                  <td className="py-4.5 px-6 font-bold text-base text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-950/20">
+                  {/* Price Per Gram (Primary Highlight with Live Tick Animation) */}
+                  <td
+                    className={`py-4.5 px-6 font-bold text-base transition-colors duration-500 bg-amber-50/40 dark:bg-amber-950/20 ${
+                      tickDirection === 'up'
+                        ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                        : tickDirection === 'down'
+                        ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10'
+                        : 'text-amber-600 dark:text-amber-400'
+                    }`}
+                  >
                     {formatCurrency(k.pricePerGram, currency)}
                   </td>
 

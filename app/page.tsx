@@ -62,22 +62,14 @@ export default function Home() {
         onRefresh={refresh}
         countdown={countdown}
         lastUpdated={lastUpdated}
+        rates={data.rates}
       />
 
       {/* Main Dashboard Body */}
       <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-10 space-y-10">
         
-        {/* FIRST SECTION SEEN BY USER: Karat & Gram Price Comparison Matrix (CoinMarketCap Inspo) */}
-        <section aria-label="Karat & Gram Price Comparison Matrix">
-          <KaratTable
-            karats={karatBreakdowns}
-            currency={selectedCurrency}
-            onSelectForCalculation={handleSelectForCalculation}
-          />
-        </section>
-
-        {/* 4 Overview Terminal Cards (Sentiment Arc, Trending, Liquidation Histogram, Vault Feature) */}
-        <section aria-label="Market Overview">
+        {/* 1. Market Overview Terminal Cards (At top of table) */}
+        <section aria-label="Market Overview" className="animate-fade-in-up">
           <MarketOverview
             data={data}
             currency={selectedCurrency}
@@ -88,8 +80,18 @@ export default function Home() {
           />
         </section>
 
+        {/* 2. Karat & Gram Price Comparison Matrix */}
+        <section id="karat-table" aria-label="Karat & Gram Price Comparison Matrix" className="animate-fade-in-up delay-100">
+          <KaratTable
+            karats={karatBreakdowns}
+            currency={selectedCurrency}
+            tickDirection={tickDirection}
+            onSelectForCalculation={handleSelectForCalculation}
+          />
+        </section>
+
         {/* Realtime Karat Cards Grid (24K, 22K, 21K, 18K, 14K, 10K, 9K) */}
-        <section aria-label="Realtime Karat Prices">
+        <section id="karat-grid" aria-label="Realtime Karat Prices" className="animate-fade-in-up delay-200">
           <KaratGrid
             karats={karatBreakdowns}
             currency={selectedCurrency}
@@ -99,7 +101,7 @@ export default function Home() {
         </section>
 
         {/* Two-Column Grid: Realtime Calculator & Interactive Flat Chart */}
-        <section aria-label="Calculator and Trends" className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        <section aria-label="Calculator and Trends" className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start animate-fade-in-up delay-300">
           <div className="xl:col-span-7">
             <GoldCalculator
               spotData={data}
@@ -107,7 +109,7 @@ export default function Home() {
               selectedKaratProp={calculatorKarat}
             />
           </div>
-          <div className="xl:col-span-5">
+          <div id="price-chart" className="xl:col-span-5">
             <PriceChart
               currentSpotUSD={data.spotPriceOunceUSD}
               currencyRate={currencyRate}
@@ -117,7 +119,7 @@ export default function Home() {
         </section>
 
         {/* Market Insights & Purity Standards */}
-        <section aria-label="Market Insights">
+        <section id="market-insights" aria-label="Market Insights">
           <MarketInsights />
         </section>
 

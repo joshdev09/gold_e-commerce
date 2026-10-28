@@ -103,18 +103,18 @@ export const WEIGHT_UNITS: Record<WeightUnit, UnitInfo> = {
 
 export const CURRENCY_INFO: Record<CurrencyCode, CurrencyInfo> = {
   USD: { code: 'USD', name: 'US Dollar', symbol: '$', rateAgainstUSD: 1.0 },
-  EUR: { code: 'EUR', name: 'Euro', symbol: '€', rateAgainstUSD: 0.922 },
-  GBP: { code: 'GBP', name: 'British Pound', symbol: '£', rateAgainstUSD: 0.788 },
-  PHP: { code: 'PHP', name: 'Philippine Peso', symbol: '₱', rateAgainstUSD: 58.45 },
+  EUR: { code: 'EUR', name: 'Euro', symbol: '€', rateAgainstUSD: 0.8975 },
+  GBP: { code: 'GBP', name: 'British Pound', symbol: '£', rateAgainstUSD: 0.7712 },
+  PHP: { code: 'PHP', name: 'Philippine Peso', symbol: '₱', rateAgainstUSD: 64.00 },
   AED: { code: 'AED', name: 'UAE Dirham', symbol: 'AED ', rateAgainstUSD: 3.6725 },
-  INR: { code: 'INR', name: 'Indian Rupee', symbol: '₹', rateAgainstUSD: 86.85 },
+  INR: { code: 'INR', name: 'Indian Rupee', symbol: '₹', rateAgainstUSD: 88.65 },
   CAD: { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', rateAgainstUSD: 1.398 },
   AUD: { code: 'AUD', name: 'Australian Dollar', symbol: 'AU$', rateAgainstUSD: 1.545 },
   SGD: { code: 'SGD', name: 'Singapore Dollar', symbol: 'SG$', rateAgainstUSD: 1.342 },
-  JPY: { code: 'JPY', name: 'Japanese Yen', symbol: '¥', rateAgainstUSD: 153.2 },
+  JPY: { code: 'JPY', name: 'Japanese Yen', symbol: '¥', rateAgainstUSD: 157.89 },
 };
 
-export const DEFAULT_SPOT_PRICE_USD = 2748.80; // Current real market spot price range
+export const DEFAULT_SPOT_PRICE_USD = 4047.80; // Real-time gold spot price benchmark (~$4,050/oz)
 export const DEFAULT_BID_SPREAD = 0.9985; // 0.15% bid discount
 export const DEFAULT_ASK_SPREAD = 1.0015; // 0.15% ask premium
 export const DEFAULT_MELT_BUYBACK_MARGIN = 0.96; // 4% discount for scrap/melt purchase

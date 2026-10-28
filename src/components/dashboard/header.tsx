@@ -25,6 +25,7 @@ interface HeaderProps {
   onRefresh: () => void;
   countdown?: number;
   lastUpdated?: number;
+  rates?: Record<CurrencyCode, number>;
 }
 
 export function Header({
@@ -36,6 +37,7 @@ export function Header({
   onRefreshIntervalChange,
   isRefreshing,
   onRefresh,
+  rates,
 }: HeaderProps) {
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState<boolean>(false);
   const [unitDropdownOpen, setUnitDropdownOpen] = useState<boolean>(false);
@@ -84,23 +86,31 @@ export function Header({
                   <div className="px-4 py-1.5 text-xs uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 font-subtitle">
                     Select Currency
                   </div>
-                  {Object.values(CURRENCY_INFO).map((c) => (
-                    <button
-                      key={c.code}
-                      onClick={() => {
-                        onCurrencyChange(c.code);
-                        setCurrencyDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-subtitle ${
-                        selectedCurrency === c.code
-                          ? 'font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40'
-                          : 'text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span>{c.code} - {c.name}</span>
-                      {selectedCurrency === c.code && <CheckIcon className="w-4 h-4 text-amber-600" />}
-                    </button>
-                  ))}
+                  {Object.values(CURRENCY_INFO).map((c) => {
+                    const currentRate = rates?.[c.code] ?? c.rateAgainstUSD;
+                    return (
+                      <button
+                        key={c.code}
+                        onClick={() => {
+                          onCurrencyChange(c.code);
+                          setCurrencyDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-subtitle ${
+                          selectedCurrency === c.code
+                            ? 'font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40'
+                            : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-semibold">{c.code} - {c.name}</span>
+                          <span className="text-[11px] text-slate-400 font-normal">
+                            {c.code === 'USD' ? 'Base Currency' : `1 USD = ${c.symbol}${currentRate.toFixed(2)}`}
+                          </span>
+                        </div>
+                        {selectedCurrency === c.code && <CheckIcon className="w-4 h-4 text-amber-600 shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

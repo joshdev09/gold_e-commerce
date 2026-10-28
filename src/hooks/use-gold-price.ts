@@ -38,7 +38,9 @@ export function useGoldPrice() {
   const prevSpotRef = useRef<number>(DEFAULT_SPOT_PRICE_USD);
 
   const fetchPrice = useCallback(async (isManual: boolean = false) => {
-    if (isManual) setIsRefreshing(true);
+    if (isManual) {
+      setIsRefreshing(true);
+    }
 
     try {
       const res = await fetch('/api/gold-price');
@@ -74,7 +76,7 @@ export function useGoldPrice() {
       setLastUpdated(Date.now());
     } finally {
       if (isManual) {
-        setTimeout(() => setIsRefreshing(false), 400);
+        setTimeout(() => setIsRefreshing(false), 500);
       }
       setTimeout(() => setTickDirection(null), 1200);
       setCountdown(refreshInterval > 0 ? Math.round(refreshInterval / 1000) : 0);
@@ -89,7 +91,7 @@ export function useGoldPrice() {
     return () => clearTimeout(timer);
   }, [fetchPrice]);
 
-  // Periodic polling interval
+  // Periodic polling interval (silent in background)
   useEffect(() => {
     if (refreshInterval <= 0) return;
 

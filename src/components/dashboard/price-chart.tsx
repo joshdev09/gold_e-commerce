@@ -11,6 +11,30 @@ interface PriceChartProps {
   currency: CurrencyCode;
 }
 
+// Catmull-Rom to Cubic Bezier path generator for smooth organic curves
+function getSmoothCurvePath(coords: { x: number; y: number }[]): string {
+  if (coords.length === 0) return '';
+  if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
+
+  let path = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i === 0 ? 0 : i - 1];
+    const p1 = coords[i];
+    const p2 = coords[i + 1];
+    const p3 = coords[i + 2 < coords.length ? i + 2 : i + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+
+  return path;
+}
+
 export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChartProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>('24H');
   const [viewMode, setViewMode] = useState<'gram' | 'ounce'>('gram');
@@ -30,9 +54,9 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
     });
   }, [points, viewMode, currencyRate]);
 
-  const { minPrice, maxPrice, endPrice, changeAmount, changePercent } = useMemo(() => {
+  const { minPrice, maxPrice, endPrice, changePercent } = useMemo(() => {
     if (dataSeries.length === 0) {
-      return { minPrice: 0, maxPrice: 0, endPrice: 0, changeAmount: 0, changePercent: 0 };
+      return { minPrice: 0, maxPrice: 0, endPrice: 0, changePercent: 0 };
     }
     const prices = dataSeries.map((d) => d.priceInCurrency);
     const min = Math.min(...prices);
@@ -45,45 +69,43 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
       minPrice: min,
       maxPrice: max,
       endPrice: end,
-      changeAmount: change,
       changePercent: pct,
     };
   }, [dataSeries]);
 
   const isPositive = changePercent >= 0;
 
-  const svgWidth = 800;
-  const svgHeight = 260;
-  const paddingX = 40;
-  const paddingY = 24;
+  const svgWidth = 720;
+  const svgHeight = 250;
+  const paddingLeft = 16;
+  const paddingRight = 64;
+  const paddingTop = 20;
+  const paddingBottom = 24;
 
-  const chartWidth = svgWidth - paddingX * 2;
-  const chartHeight = svgHeight - paddingY * 2;
+  const chartWidth = svgWidth - paddingLeft - paddingRight;
+  const chartHeight = svgHeight - paddingTop - paddingBottom;
   const priceRange = Math.max(0.01, maxPrice - minPrice);
 
   const coordinates = useMemo(() => {
     if (dataSeries.length === 0) return [];
     return dataSeries.map((d, index) => {
-      const x = paddingX + (index / (dataSeries.length - 1)) * chartWidth;
-      const y = paddingY + chartHeight - ((d.priceInCurrency - minPrice) / priceRange) * chartHeight;
+      const x = paddingLeft + (index / (dataSeries.length - 1)) * chartWidth;
+      const y = paddingTop + chartHeight - ((d.priceInCurrency - minPrice) / priceRange) * chartHeight;
       return { x, y, data: d };
     });
-  }, [dataSeries, minPrice, priceRange, chartWidth, chartHeight, paddingX, paddingY]);
+  }, [dataSeries, minPrice, priceRange, chartWidth, chartHeight, paddingLeft, paddingTop]);
 
-  const linePath = useMemo(() => {
-    if (coordinates.length === 0) return '';
-    return coordinates.reduce((acc, curr, idx) => {
-      return `${acc} ${idx === 0 ? 'M' : 'L'} ${curr.x.toFixed(1)} ${curr.y.toFixed(1)}`;
-    }, '');
+  const smoothLinePath = useMemo(() => {
+    return getSmoothCurvePath(coordinates);
   }, [coordinates]);
 
-  const areaPath = useMemo(() => {
+  const smoothAreaPath = useMemo(() => {
     if (coordinates.length === 0) return '';
-    const bottomY = paddingY + chartHeight;
+    const bottomY = paddingTop + chartHeight;
     const firstX = coordinates[0].x;
     const lastX = coordinates[coordinates.length - 1].x;
-    return `${linePath} L ${lastX.toFixed(1)} ${bottomY} L ${firstX.toFixed(1)} ${bottomY} Z`;
-  }, [linePath, coordinates, paddingY, chartHeight]);
+    return `${smoothLinePath} L ${lastX.toFixed(1)} ${bottomY} L ${firstX.toFixed(1)} ${bottomY} Z`;
+  }, [smoothLinePath, coordinates, paddingTop, chartHeight]);
 
   const activePoint = hoveredPoint || dataSeries[dataSeries.length - 1];
   const activePriceInCurrency = activePoint
@@ -91,30 +113,34 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
     : endPrice;
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-8 space-y-6 shadow-sm transition-colors">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-7 sm:p-8 space-y-6 shadow-xs transition-colors">
       
-      {/* CoinMarketCap Inspo: Top Header with Breadcrumbs & Clean Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      {/* Top Header with Price, Trend, and Clean Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
         <div>
-          <div className="text-xs font-subtitle uppercase text-slate-400 tracking-wider font-semibold">
-            Precious Metals &gt; Physical Gold Spot
-          </div>
-          <div className="flex items-baseline gap-3 mt-2">
-            <span className="text-3xl sm:text-4xl font-bold font-header text-slate-900 dark:text-white tracking-tight">
+          <span className="text-xs font-header font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+            Spot Bullion Price Trend
+          </span>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="text-3xl sm:text-4xl font-extrabold font-header text-slate-900 dark:text-white tracking-tight">
               {formatCurrency(activePriceInCurrency, currency)}
             </span>
-            <span className="text-sm font-subtitle text-slate-400 font-medium">/ {viewMode === 'gram' ? 'gram' : 'troy oz'}</span>
+            <span className="text-xs font-subtitle text-slate-400 font-medium">
+              / {viewMode === 'gram' ? 'g' : 'oz'}
+            </span>
             <span
-              className={`inline-flex items-center gap-1.5 text-sm font-subtitle font-bold ${
-                isPositive ? 'text-emerald-500' : 'text-rose-500'
+              className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full font-subtitle ${
+                isPositive
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
               }`}
             >
               {isPositive ? (
-                <svg viewBox="0 0 10 8" className="w-2.5 h-2.5 fill-current shrink-0" aria-hidden="true">
+                <svg viewBox="0 0 10 8" className="w-2 h-2 fill-current shrink-0" aria-hidden="true">
                   <path d="M5 1L9.5 7.5H0.5L5 1Z" />
                 </svg>
               ) : (
-                <svg viewBox="0 0 10 8" className="w-2.5 h-2.5 fill-current shrink-0" aria-hidden="true">
+                <svg viewBox="0 0 10 8" className="w-2 h-2 fill-current shrink-0" aria-hidden="true">
                   <path d="M5 7L0.5 0.5H9.5L5 7Z" />
                 </svg>
               )}
@@ -123,44 +149,44 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
           </div>
         </div>
 
-        {/* View mode & Timeframe Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* View Mode & Timeframe Controls */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* Unit Toggle: Gram vs Ounce */}
-          <div className="bg-slate-100 dark:bg-slate-800 p-1.5 border border-slate-200 dark:border-slate-700 rounded-lg flex">
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 rounded-xl flex">
             <button
               type="button"
               onClick={() => setViewMode('gram')}
-              className={`px-3.5 py-2 text-sm font-semibold uppercase rounded-md transition-colors cursor-pointer font-subtitle ${
+              className={`px-3 py-1.5 text-xs font-subtitle font-semibold uppercase rounded-lg transition-all cursor-pointer ${
                 viewMode === 'gram'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 shadow-xs'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Per Gram
+              Gram
             </button>
             <button
               type="button"
               onClick={() => setViewMode('ounce')}
-              className={`px-3.5 py-2 text-sm font-semibold uppercase rounded-md transition-colors cursor-pointer font-subtitle ${
+              className={`px-3 py-1.5 text-xs font-subtitle font-semibold uppercase rounded-lg transition-all cursor-pointer ${
                 viewMode === 'ounce'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 shadow-xs'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Per Ounce
+              Ounce
             </button>
           </div>
 
-          {/* Timeframe Buttons */}
-          <div className="bg-slate-100 dark:bg-slate-800 p-1.5 border border-slate-200 dark:border-slate-700 rounded-lg flex">
+          {/* Timeframe Selector */}
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 rounded-xl flex">
             {(['24H', '7D', '30D', '90D', '1Y'] as Timeframe[]).map((tf) => (
               <button
                 key={tf}
                 type="button"
                 onClick={() => setTimeframe(tf)}
-                className={`px-3.5 py-2 text-sm font-semibold uppercase rounded-md transition-colors cursor-pointer font-subtitle ${
+                className={`px-2.5 py-1.5 text-xs font-subtitle font-semibold uppercase rounded-lg transition-all cursor-pointer ${
                   timeframe === tf
-                    ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700 shadow-xs'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -171,70 +197,78 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
         </div>
       </div>
 
-      {/* SVG Chart Container */}
+      {/* SVG Smooth Curve Chart Container */}
       <div className="relative w-full overflow-hidden select-none">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full h-auto overflow-visible cursor-crosshair"
           onMouseLeave={() => setHoveredPoint(null)}
         >
-          {/* Horizontal Grid lines */}
+          <defs>
+            <linearGradient id="chartSmoothGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
+              <stop offset="60%" stopColor="#10b981" stopOpacity="0.05" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          {/* Subtle Horizontal Reference Gridlines */}
           <line
-            x1={paddingX}
-            y1={paddingY}
-            x2={svgWidth - paddingX}
-            y2={paddingY}
-            className="stroke-slate-200 dark:stroke-slate-800"
+            x1={paddingLeft}
+            y1={paddingTop}
+            x2={svgWidth - paddingRight}
+            y2={paddingTop}
+            className="stroke-slate-200/70 dark:stroke-slate-800"
             strokeDasharray="4 4"
             strokeWidth="1"
           />
           <line
-            x1={paddingX}
-            y1={paddingY + chartHeight / 2}
-            x2={svgWidth - paddingX}
-            y2={paddingY + chartHeight / 2}
-            className="stroke-slate-200 dark:stroke-slate-800"
+            x1={paddingLeft}
+            y1={paddingTop + chartHeight / 2}
+            x2={svgWidth - paddingRight}
+            y2={paddingTop + chartHeight / 2}
+            className="stroke-slate-200/70 dark:stroke-slate-800"
             strokeDasharray="4 4"
             strokeWidth="1"
           />
           <line
-            x1={paddingX}
-            y1={paddingY + chartHeight}
-            x2={svgWidth - paddingX}
-            y2={paddingY + chartHeight}
-            className="stroke-slate-200 dark:stroke-slate-800"
+            x1={paddingLeft}
+            y1={paddingTop + chartHeight}
+            x2={svgWidth - paddingRight}
+            y2={paddingTop + chartHeight}
+            className="stroke-slate-200/70 dark:stroke-slate-800"
+            strokeDasharray="4 4"
             strokeWidth="1"
           />
 
-          {/* Grid Labels */}
+          {/* Right Axis Labels: Clean and Unobtrusive */}
           <text
-            x={paddingX}
-            y={paddingY - 8}
+            x={svgWidth - paddingRight + 12}
+            y={paddingTop + 4}
             className="text-[10px] font-mono fill-slate-400 font-semibold"
           >
-            HIGH: {formatCurrency(maxPrice, currency)}
+            {formatCurrency(maxPrice, currency)}
           </text>
           <text
-            x={paddingX}
-            y={paddingY + chartHeight + 16}
+            x={svgWidth - paddingRight + 12}
+            y={paddingTop + chartHeight + 4}
             className="text-[10px] font-mono fill-slate-400 font-semibold"
           >
-            LOW: {formatCurrency(minPrice, currency)}
+            {formatCurrency(minPrice, currency)}
           </text>
 
-          {/* Flat Area Fill */}
+          {/* Smooth Gradient Area Fill */}
           <path
-            d={areaPath}
-            className="fill-amber-500/10 dark:fill-amber-500/15"
+            d={smoothAreaPath}
+            fill="url(#chartSmoothGrad)"
           />
 
-          {/* Primary Trend Line */}
+          {/* Smooth Primary Trend Curve */}
           <path
-            d={linePath}
+            d={smoothLinePath}
             fill="none"
-            className="stroke-amber-500 dark:stroke-amber-400"
+            className="stroke-emerald-600 dark:stroke-emerald-400"
             strokeWidth="2.5"
-            strokeLinejoin="round"
             strokeLinecap="round"
           />
 
@@ -257,19 +291,19 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
                 <>
                   <line
                     x1={coord.x}
-                    y1={paddingY}
+                    y1={paddingTop}
                     x2={coord.x}
-                    y2={paddingY + chartHeight}
-                    className="stroke-amber-500/60"
+                    y2={paddingTop + chartHeight}
+                    className="stroke-emerald-500/50"
                     strokeWidth="1"
-                    strokeDasharray="2 2"
+                    strokeDasharray="3 3"
                   />
                   <circle
                     cx={coord.x}
                     cy={coord.y}
                     r="5"
-                    className="fill-amber-500 stroke-white dark:stroke-slate-900"
-                    strokeWidth="2"
+                    className="fill-emerald-500 stroke-white dark:stroke-slate-900 shadow-sm"
+                    strokeWidth="2.5"
                   />
                 </>
               )}
@@ -279,9 +313,9 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
 
         {/* Hover Tooltip Overlay */}
         {hoveredPoint && (
-          <div className="absolute top-2 right-4 bg-slate-900 text-white p-3 rounded-lg border border-slate-700 text-xs font-mono pointer-events-none z-10 shadow-lg">
+          <div className="absolute top-2 left-6 bg-slate-900/95 text-white px-3.5 py-2.5 rounded-xl border border-slate-700/80 text-xs font-mono pointer-events-none z-10 shadow-lg backdrop-blur-xs">
             <div className="text-slate-400 text-[10px] uppercase font-subtitle">{hoveredPoint.date}</div>
-            <div className="text-sm font-bold text-amber-400 mt-0.5">
+            <div className="text-sm font-bold text-emerald-400 mt-0.5">
               {formatCurrency(
                 (viewMode === 'gram' ? hoveredPoint.priceGramUSD : hoveredPoint.priceOunceUSD) *
                   currencyRate,
@@ -289,39 +323,40 @@ export function PriceChart({ currentSpotUSD, currencyRate, currency }: PriceChar
               )}
             </div>
             <div className="text-[10px] text-slate-300 font-subtitle">
-              Gold spot per {viewMode === 'gram' ? 'gram' : 'troy oz'}
+              Spot per {viewMode === 'gram' ? 'gram' : 'troy oz'}
             </div>
           </div>
         )}
       </div>
 
-      {/* Chart Footer Metrics (Spacious CoinMarketCap Grid) */}
-      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm font-subtitle">
-        <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-lg">
-          <span className="text-xs text-slate-400 uppercase block font-subtitle font-semibold">Period Range</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 mt-1 block">
+      {/* Unified 4-Column Metric Strip (Replaces the chunky 4 boxes) */}
+      <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-subtitle">
+        <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 rounded-xl">
+          <span className="text-[11px] text-slate-400 uppercase block font-semibold">Period Range</span>
+          <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block text-sm">
             {timeframe} Interval
           </span>
         </div>
-        <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-lg">
-          <span className="text-xs text-slate-400 uppercase block font-subtitle font-semibold">Period High</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 mt-1 block">
+        <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 rounded-xl">
+          <span className="text-[11px] text-slate-400 uppercase block font-semibold">Period High</span>
+          <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block text-sm">
             {formatCurrency(maxPrice, currency)}
           </span>
         </div>
-        <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-lg">
-          <span className="text-xs text-slate-400 uppercase block font-subtitle font-semibold">Period Low</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 mt-1 block">
+        <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 rounded-xl">
+          <span className="text-[11px] text-slate-400 uppercase block font-semibold">Period Low</span>
+          <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block text-sm">
             {formatCurrency(minPrice, currency)}
           </span>
         </div>
-        <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-lg">
-          <span className="text-xs text-slate-400 uppercase block font-subtitle font-semibold">Net Volatility</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 mt-1 block">
-            {formatCurrency(changeAmount, currency)} ({(((maxPrice - minPrice) / minPrice) * 100).toFixed(2)}%)
+        <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 rounded-xl">
+          <span className="text-[11px] text-slate-400 uppercase block font-semibold">Spread Range</span>
+          <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block text-sm">
+            {formatCurrency(maxPrice - minPrice, currency)}
           </span>
         </div>
       </div>
+
     </div>
   );
 }
